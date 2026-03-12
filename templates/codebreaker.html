@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CODE BREAKER // BASE CAMP</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --green: #00ff41;
+      --dim-green: #00aa2a;
+      --dark-green: #003b10;
+      --bg: #0a0a0a;
+      --panel: #0d0d0d;
+      --border: #00ff4133;
+      --glow: 0 0 8px #00ff41aa;
+      --glow-strong: 0 0 18px #00ff41cc, 0 0 40px #00ff4155;
+      --red: #ff3a3a;
+      --yellow: #ffe94d;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--green);
+      font-family: 'Share Tech Mono', monospace;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      overflow-x: hidden;
+    }
+
+    /* Scanline overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.08) 2px,
+        rgba(0,0,0,0.08) 4px
+      );
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    /* Matrix rain canvas */
+    #matrix-canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      opacity: 0.04;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 640px;
+    }
+
+    /* NAV */
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0 24px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 32px;
+    }
+
+    nav a {
+      color: var(--dim-green);
+      text-decoration: none;
+      font-size: 13px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      transition: color 0.2s, text-shadow 0.2s;
+    }
+
+    nav a:hover {
+      color: var(--green);
+      text-shadow: var(--glow);
+    }
+
+    .nav-logo {
+      font-family: 'VT323', monospace;
+      font-size: 22px;
+      color: var(--green);
+      text-shadow: var(--glow);
+      letter-spacing: 3px;
+    }
+
+    /* HEADER */
+    .header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+
+    .header h1 {
+      font-family: 'VT323', monospace;
+      font-size: clamp(48px, 10vw, 72px);
+      letter-spacing: 6px;
+      text-shadow: var(--glow-strong);
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .header .subtitle {
+      font-size: 12px;
+      letter-spacing: 4px;
+      color: var(--dim-green);
+      text-transform: uppercase;
+    }
+
+    /* GAME PANEL */
+    .panel {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      padding: 28px;
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .panel::before {
+      content: attr(data-label);
+      position: absolute;
+      top: -10px;
+      left: 16px;
+      background: var(--panel);
+      padding: 0 8px;
+      font-size: 11px;
+      letter-spacing: 3px;
+      color: var(--dim-green);
+      text-transform: uppercase;
+    }
+
+    /* STATUS BAR */
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      letter-spacing: 2px;
+      margin-bottom: 28px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .status-item span {
+      color: var(--dim-green);
+      font-size: 11px;
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .status-value {
+      font-size: 20px;
+      font-family: 'VT323', monospace;
+      text-shadow: var(--glow);
+    }
+
+    #timer-value { color: var(--yellow); text-shadow: 0 0 8px #ffe94daa; }
+    #timer-value.urgent { color: var(--red); text-shadow: 0 0 8px #ff3a3aaa; animation: pulse 0.5s infinite; }
+
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+
+    /* GUESS HISTORY */
+    .history {
+      min-height: 160px;
+      margin-bottom: 20px;
+    }
+
+    .history-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid #ffffff08;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn { from { opacity:0; transform: translateX(-8px); } to { opacity:1; transform: translateX(0); } }
+
+    .history-attempt {
+      font-size: 11px;
+      color: var(--dim-green);
+      width: 24px;
+      letter-spacing: 1px;
+    }
+
+    .history-digits {
+      display: flex;
+      gap: 8px;
+    }
+
+    .digit-box {
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'VT323', monospace;
+      font-size: 22px;
+      transition: all 0.3s;
+    }
+
+    .digit-box.correct {
+      border-color: var(--green);
+      background: #00ff4115;
+      color: var(--green);
+      text-shadow: var(--glow);
+    }
+
+    .digit-box.misplaced {
+      border-color: var(--yellow);
+      background: #ffe94d10;
+      color: var(--yellow);
+      text-shadow: 0 0 8px #ffe94daa;
+    }
+
+    .digit-box.wrong {
+      border-color: #ffffff15;
+      color: #ffffff30;
+    }
+
+    .history-feedback {
+      font-size: 11px;
+      letter-spacing: 1px;
+      margin-left: auto;
+      text-align: right;
+      line-height: 1.6;
+    }
+
+    .fb-correct { color: var(--green); }
+    .fb-misplaced { color: var(--yellow); }
+
+    /* INPUT AREA */
+    .input-area {
+      display: flex;
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .digit-inputs {
+      display: flex;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .digit-input {
+      flex: 1;
+      background: #000;
+      border: 1px solid var(--dim-green);
+      color: var(--green);
+      font-family: 'VT323', monospace;
+      font-size: 28px;
+      text-align: center;
+      padding: 8px 4px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      -moz-appearance: textfield;
+      width: 0;
+    }
+
+    .digit-input::-webkit-outer-spin-button,
+    .digit-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    .digit-input:focus {
+      border-color: var(--green);
+      box-shadow: var(--glow);
+    }
+
+    .btn {
+      background: transparent;
+      border: 1px solid var(--green);
+      color: var(--green);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 12px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      padding: 10px 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      background: var(--green);
+      color: #000;
+      box-shadow: var(--glow-strong);
+    }
+
+    .btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .btn-danger {
+      border-color: var(--red);
+      color: var(--red);
+    }
+
+    .btn-danger:hover {
+      background: var(--red);
+      color: #000;
+      box-shadow: 0 0 18px #ff3a3acc;
+    }
+
+    /* MESSAGE */
+    #message {
+      text-align: center;
+      font-size: 13px;
+      letter-spacing: 2px;
+      min-height: 20px;
+      margin-top: 16px;
+      color: var(--dim-green);
+    }
+
+    #message.error { color: var(--red); text-shadow: 0 0 8px #ff3a3a88; }
+    #message.success { color: var(--green); text-shadow: var(--glow); }
+
+    /* LEGEND */
+    .legend {
+      display: flex;
+      gap: 20px;
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: var(--dim-green);
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-dot {
+      width: 10px; height: 10px;
+      border: 1px solid;
+    }
+    .legend-dot.correct { border-color: var(--green); background: #00ff4115; }
+    .legend-dot.misplaced { border-color: var(--yellow); background: #ffe94d10; }
+    .legend-dot.wrong { border-color: #ffffff20; }
+
+    /* OVERLAY */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .overlay.active { display: flex; }
+
+    .overlay-box {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      padding: 48px;
+      text-align: center;
+      max-width: 400px;
+      width: 90%;
+      animation: fadeIn 0.4s ease;
+    }
+
+    .overlay-title {
+      font-family: 'VT323', monospace;
+      font-size: 52px;
+      line-height: 1;
+      margin-bottom: 12px;
+    }
+
+    .overlay-title.win { color: var(--green); text-shadow: var(--glow-strong); }
+    .overlay-title.lose { color: var(--red); text-shadow: 0 0 18px #ff3a3acc; }
+
+    .overlay-sub {
+      font-size: 12px;
+      letter-spacing: 3px;
+      color: var(--dim-green);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+
+    .overlay-code {
+      font-family: 'VT323', monospace;
+      font-size: 36px;
+      letter-spacing: 8px;
+      margin: 20px 0 28px;
+      color: var(--green);
+      text-shadow: var(--glow);
+    }
+
+    .overlay-stats {
+      font-size: 12px;
+      color: var(--dim-green);
+      letter-spacing: 2px;
+      margin-bottom: 28px;
+      line-height: 2;
+    }
+
+    footer {
+      margin-top: 40px;
+      font-size: 11px;
+      color: #ffffff15;
+      letter-spacing: 3px;
+      text-align: center;
+      padding-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="matrix-canvas"></canvas>
+
+<div class="wrapper">
+
+  <nav>
+    <a href="/">← BASE CAMP</a>
+    <span class="nav-logo">BASE CAMP</span>
+    <a href="/projects">PROJECTS</a>
+  </nav>
+
+  <div class="header">
+    <h1>CODE BREAKER</h1>
+    <p class="subtitle">Decrypt the 4-digit sequence before time expires</p>
+  </div>
+
+  <div class="panel" data-label="SYSTEM STATUS">
+    <div class="status-bar">
+      <div class="status-item">
+        <span>ATTEMPTS</span>
+        <div class="status-value"><span id="attempts-used">0</span> / <span id="max-attempts">8</span></div>
+      </div>
+      <div class="status-item" style="text-align:center">
+        <span>TIME REMAINING</span>
+        <div class="status-value" id="timer-value">60</div>
+      </div>
+      <div class="status-item" style="text-align:right">
+        <span>DIFFICULTY</span>
+        <div class="status-value" id="difficulty-display">STANDARD</div>
+      </div>
+    </div>
+
+    <div class="history" id="history"></div>
+
+    <div class="input-area">
+      <div class="digit-inputs" id="digit-inputs">
+        <input class="digit-input" type="number" min="0" max="9" maxlength="1" data-index="0" placeholder="?"/>
+        <input class="digit-input" type="number" min="0" max="9" maxlength="1" data-index="1" placeholder="?"/>
+        <input class="digit-input" type="number" min="0" max="9" maxlength="1" data-index="2" placeholder="?"/>
+        <input class="digit-input" type="number" min="0" max="9" maxlength="1" data-index="3" placeholder="?"/>
+      </div>
+      <button class="btn" id="submit-btn" onclick="submitGuess()">BREACH</button>
+    </div>
+
+    <div id="message"></div>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot correct"></div> Correct position</div>
+      <div class="legend-item"><div class="legend-dot misplaced"></div> Wrong position</div>
+      <div class="legend-item"><div class="legend-dot wrong"></div> Not in code</div>
+    </div>
+  </div>
+
+  <div style="display:flex; gap:10px;">
+    <button class="btn btn-danger" style="flex:1" onclick="resetGame()">ABORT // NEW GAME</button>
+  </div>
+
+</div>
+
+<!-- WIN/LOSE OVERLAY -->
+<div class="overlay" id="overlay">
+  <div class="overlay-box">
+    <div class="overlay-title" id="overlay-title">ACCESS GRANTED</div>
+    <div class="overlay-sub" id="overlay-sub">System breached</div>
+    <div class="overlay-code" id="overlay-code"></div>
+    <div class="overlay-stats" id="overlay-stats"></div>
+    <button class="btn" onclick="resetGame()" style="width:100%">REINITIALIZE SEQUENCE</button>
+  </div>
+</div>
+
+<footer>BASE CAMP // CODE BREAKER v1.0 // UNAUTHORIZED ACCESS IS MONITORED</footer>
+
+<script>
+  // ── MATRIX RAIN ──────────────────────────────────────────────
+  const canvas = document.getElementById('matrix-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const cols = Math.floor(canvas.width / 16);
+  const drops = Array(cols).fill(1);
+
+  function drawMatrix() {
+    ctx.fillStyle = 'rgba(0,0,0,0.05)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#00ff41';
+    ctx.font = '14px Share Tech Mono';
+    drops.forEach((y, i) => {
+      const char = Math.random() > 0.5
+        ? String.fromCharCode(0x30A0 + Math.floor(Math.random() * 96))
+        : Math.floor(Math.random() * 10).toString();
+      ctx.fillText(char, i * 16, y * 16);
+      if (y * 16 > canvas.height && Math.random() > 0.975) drops[i] = 0;
+      drops[i]++;
+    });
+  }
+  setInterval(drawMatrix, 50);
+  window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  });
+
+  // ── GAME STATE ────────────────────────────────────────────────
+  const MAX_ATTEMPTS = 8;
+  const TIME_LIMIT = 60;
+
+  let secretCode = [];
+  let attemptsUsed = 0;
+  let timeLeft = TIME_LIMIT;
+  let timerInterval = null;
+  let gameActive = false;
+
+  // ── INIT ──────────────────────────────────────────────────────
+  function generateCode() {
+    return Array.from({ length: 4 }, () => Math.floor(Math.random() * 10));
+  }
+
+  function startTimer() {
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      timeLeft--;
+      const el = document.getElementById('timer-value');
+      el.textContent = timeLeft;
+      if (timeLeft <= 10) el.classList.add('urgent');
+      else el.classList.remove('urgent');
+      if (timeLeft <= 0) {
+        clearInterval(timerInterval);
+        endGame(false, 'timeout');
+      }
+    }, 1000);
+  }
+
+  function resetGame() {
+    secretCode = generateCode();
+    attemptsUsed = 0;
+    timeLeft = TIME_LIMIT;
+    gameActive = true;
+
+    document.getElementById('history').innerHTML = '';
+    document.getElementById('attempts-used').textContent = 0;
+    document.getElementById('timer-value').textContent = TIME_LIMIT;
+    document.getElementById('timer-value').classList.remove('urgent');
+    document.getElementById('message').textContent = '';
+    document.getElementById('message').className = '';
+    document.getElementById('overlay').classList.remove('active');
+    document.getElementById('submit-btn').disabled = false;
+
+    clearInputs();
+    startTimer();
+    focusFirst();
+  }
+
+  // ── INPUT HANDLING ────────────────────────────────────────────
+  function clearInputs() {
+    document.querySelectorAll('.digit-input').forEach(el => el.value = '');
+  }
+
+  function focusFirst() {
+    document.querySelector('.digit-input[data-index="0"]').focus();
+  }
+
+  // Auto-advance between digit boxes
+  document.querySelectorAll('.digit-input').forEach(input => {
+    input.addEventListener('input', function () {
+      // Only allow single digit
+      if (this.value.length > 1) this.value = this.value.slice(-1);
+      if (this.value !== '' && parseInt(this.value) >= 0 && parseInt(this.value) <= 9) {
+        const next = document.querySelector(`.digit-input[data-index="${parseInt(this.dataset.index) + 1}"]`);
+        if (next) next.focus();
+      }
+    });
+
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Backspace' && this.value === '') {
+        const prev = document.querySelector(`.digit-input[data-index="${parseInt(this.dataset.index) - 1}"]`);
+        if (prev) { prev.focus(); prev.value = ''; }
+      }
+      if (e.key === 'Enter') submitGuess();
+    });
+  });
+
+  // ── GUESS LOGIC ───────────────────────────────────────────────
+  function getGuess() {
+    const inputs = document.querySelectorAll('.digit-input');
+    const vals = [];
+    for (const input of inputs) {
+      const v = input.value.trim();
+      if (v === '' || isNaN(v)) return null;
+      vals.push(parseInt(v));
+    }
+    return vals;
+  }
+
+  function checkGuess(guess, code) {
+    // Returns array of 'correct', 'misplaced', or 'wrong' for each position
+    const result = Array(4).fill('wrong');
+    const codeUsed = Array(4).fill(false);
+    const guessUsed = Array(4).fill(false);
+
+    // First pass: correct positions
+    for (let i = 0; i < 4; i++) {
+      if (guess[i] === code[i]) {
+        result[i] = 'correct';
+        codeUsed[i] = true;
+        guessUsed[i] = true;
+      }
+    }
+
+    // Second pass: misplaced
+    for (let i = 0; i < 4; i++) {
+      if (guessUsed[i]) continue;
+      for (let j = 0; j < 4; j++) {
+        if (codeUsed[j]) continue;
+        if (guess[i] === code[j]) {
+          result[i] = 'misplaced';
+          codeUsed[j] = true;
+          break;
+        }
+      }
+    }
+
+    return result;
+  }
+
+  function submitGuess() {
+    if (!gameActive) return;
+
+    const guess = getGuess();
+    if (!guess) {
+      showMessage('// INCOMPLETE SEQUENCE — ENTER ALL 4 DIGITS', 'error');
+      return;
+    }
+
+    const result = checkGuess(guess, secretCode);
+    attemptsUsed++;
+
+    document.getElementById('attempts-used').textContent = attemptsUsed;
+
+    // Add row to history
+    addHistoryRow(guess, result, attemptsUsed);
+    clearInputs();
+    focusFirst();
+
+    const correctCount = result.filter(r => r === 'correct').length;
+    const misplacedCount = result.filter(r => r === 'misplaced').length;
+
+    if (correctCount === 4) {
+      clearInterval(timerInterval);
+      endGame(true, 'solved');
+    } else if (attemptsUsed >= MAX_ATTEMPTS) {
+      clearInterval(timerInterval);
+      endGame(false, 'attempts');
+    } else {
+      showMessage(`// ${correctCount} CORRECT · ${misplacedCount} MISPLACED · CONTINUE BREACH`, '');
+    }
+  }
+
+  function addHistoryRow(guess, result, attempt) {
+    const history = document.getElementById('history');
+    const row = document.createElement('div');
+    row.className = 'history-row';
+
+    const attemptEl = document.createElement('div');
+    attemptEl.className = 'history-attempt';
+    attemptEl.textContent = `#${attempt}`;
+
+    const digitsEl = document.createElement('div');
+    digitsEl.className = 'history-digits';
+
+    guess.forEach((digit, i) => {
+      const box = document.createElement('div');
+      box.className = `digit-box ${result[i]}`;
+      box.textContent = digit;
+      digitsEl.appendChild(box);
+    });
+
+    const correctCount = result.filter(r => r === 'correct').length;
+    const misplacedCount = result.filter(r => r === 'misplaced').length;
+
+    const feedbackEl = document.createElement('div');
+    feedbackEl.className = 'history-feedback';
+    feedbackEl.innerHTML = `
+      <span class="fb-correct">▲ ${correctCount} LOCKED</span><br>
+      <span class="fb-misplaced">◆ ${misplacedCount} SIGNAL</span>
+    `;
+
+    row.appendChild(attemptEl);
+    row.appendChild(digitsEl);
+    row.appendChild(feedbackEl);
+    history.appendChild(row);
+    history.scrollTop = history.scrollHeight;
+  }
+
+  // ── END GAME ──────────────────────────────────────────────────
+  function endGame(won, reason) {
+    gameActive = false;
+    document.getElementById('submit-btn').disabled = true;
+
+    const overlay = document.getElementById('overlay');
+    const title = document.getElementById('overlay-title');
+    const sub = document.getElementById('overlay-sub');
+    const codeEl = document.getElementById('overlay-code');
+    const stats = document.getElementById('overlay-stats');
+
+    codeEl.textContent = secretCode.join(' ');
+
+    if (won) {
+      title.textContent = 'ACCESS GRANTED';
+      title.className = 'overlay-title win';
+      sub.textContent = 'Encryption sequence breached';
+      stats.innerHTML = `ATTEMPTS USED: ${attemptsUsed} / ${MAX_ATTEMPTS}<br>TIME REMAINING: ${timeLeft}s<br>SEQUENCE: ${secretCode.join('-')}`;
+    } else {
+      title.textContent = reason === 'timeout' ? 'CONNECTION LOST' : 'LOCKOUT';
+      title.className = 'overlay-title lose';
+      sub.textContent = reason === 'timeout' ? 'Timer expired — system purged' : 'Max attempts reached — traced';
+      stats.innerHTML = `ATTEMPTS USED: ${attemptsUsed} / ${MAX_ATTEMPTS}<br>THE CODE WAS: ${secretCode.join('-')}`;
+    }
+
+    overlay.classList.add('active');
+  }
+
+  function showMessage(text, type) {
+    const el = document.getElementById('message');
+    el.textContent = text;
+    el.className = type;
+  }
+
+  // ── START ─────────────────────────────────────────────────────
+  resetGame();
+</script>
+</body>
+</html>
