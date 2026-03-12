@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Base Camp // About</title>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: #0d0d0d;
+            color: #00ff41;
+            font-family: 'Share Tech Mono', monospace;
+            min-height: 100vh;
+        }
+
+        nav {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 20px 40px;
+            border-bottom: 1px solid #00ff41;
+            display: flex;
+            gap: 40px;
+        }
+
+        nav a {
+            color: #00ff41;
+            text-decoration: none;
+            font-size: 14px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+        }
+
+        nav a:hover {
+            color: #ffffff;
+            text-shadow: 0 0 10px #00ff41;
+        }
+
+        .about-container {
+            max-width: 800px;
+            margin: 80px auto;
+            padding: 0 40px;
+        }
+
+        .about-container h1 {
+            font-size: 48px;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            text-shadow: 0 0 20px #00ff41;
+            margin-bottom: 40px;
+        }
+
+        .bio {
+            border-left: 2px solid #00ff41;
+            padding-left: 24px;
+            margin-bottom: 60px;
+        }
+
+        .bio p {
+            color: #aaffaa;
+            font-size: 16px;
+            line-height: 2;
+            margin-bottom: 16px;
+        }
+
+        .skills-section h2 {
+            font-size: 20px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 24px;
+            color: #00ff41;
+        }
+
+        .skill-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .skill-item span {
+            font-size: 13px;
+            letter-spacing: 2px;
+            color: #aaffaa;
+            width: 200px;
+        }
+
+        .skill-bar {
+            height: 2px;
+            background: rgba(0, 255, 65, 0.2);
+            flex: 1;
+            position: relative;
+        }
+
+        .skill-bar-fill {
+            height: 100%;
+            background: #00ff41;
+            box-shadow: 0 0 8px #00ff41;
+        }
+
+        .status-block {
+            margin-top: 60px;
+            border: 1px solid rgba(0, 255, 65, 0.3);
+            padding: 24px;
+            background: rgba(0, 255, 65, 0.03);
+        }
+
+        .status-block p {
+            font-size: 13px;
+            color: #aaffaa;
+            letter-spacing: 1px;
+            line-height: 2;
+        }
+
+        .status-block .highlight {
+            color: #00ff41;
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="/">Home</a>
+    <a href="/projects">Projects</a>
+    <a href="/about">About</a>
+    <a href="/contact">Contact</a>
+</nav>
+
+<div class="about-container">
+    <h1>// About</h1>
+
+    <div class="bio">
+        <p>I'm John — a developer based in Olympia, WA.</p>
+        <p>I build automation tools, web apps, and whatever problems need solving. Currently expanding my stack and adding to this portfolio every week.</p>
+        <p>5 years of real world work experience including team leadership. I bring the same reliability and problem solving to every project I take on.</p>
+    </div>
+
+    <div class="skills-section">
+        <h2>// Current Stack</h2>
+
+        <div class="skill-item">
+            <span>Python</span>
