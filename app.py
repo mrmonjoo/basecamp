@@ -19,5 +19,9 @@ def about():
 def contact():
     return render_template("contact.html")
 
+@app.route('/codebreaker')
+def codebreaker():
+    return render_template('codebreaker.html')
+
 if __name__ == "__main__":
     app.run(debug=True)
